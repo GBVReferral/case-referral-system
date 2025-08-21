@@ -20,7 +20,7 @@ const UserList = () => {
         } catch (error) {
             console.error("Error fetching users:", error);
             Swal.fire("Error", "Failed to load users", "error");
-        }finally {
+        } finally {
             setLoading(false); // ✅ done loading
         }
     };
@@ -29,25 +29,43 @@ const UserList = () => {
         fetchUsers();
     }, []);
 
-    const handleDelete = async (id) => {
-        const result = await Swal.fire({
+    const handleDelete = async (user) => {
+        const { value: typedEmail } = await Swal.fire({
             title: "Delete User?",
-            text: "Are you sure you want to delete this user?",
-            icon: "warning",
+            html: `<p>Type the email of the user to confirm deletion:</p>
+               <input id="swal-input-email" class="swal2-input" placeholder="User Email">`,
             showCancelButton: true,
             confirmButtonText: "Delete",
             cancelButtonText: "Cancel",
+            preConfirm: () => {
+                return document.getElementById("swal-input-email").value.trim();
+            },
         });
 
-        if (result.isConfirmed) {
-            try {
-                await deleteDoc(doc(db, "users", id));
-                Swal.fire("Deleted!", "User has been deleted.", "success");
-                fetchUsers();
-            } catch (error) {
-                console.error("Error deleting user:", error);
-                Swal.fire("Error", "Failed to delete user", "error");
-            }
+        if (!typedEmail) return; // cancelled
+
+        if (typedEmail !== user.email) {
+            Swal.fire("Error", "Email does not match! Deletion cancelled.", "error");
+            return;
+        }
+
+        // Proceed to delete
+        try {
+            // Call your backend API instead of direct deleteDoc if using Firebase Admin
+            const res = await fetch("/api/deleteUser", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uid: user.id }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to delete user");
+
+            Swal.fire("Deleted!", "User has been deleted.", "success");
+            fetchUsers();
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            Swal.fire("Error", error.message, "error");
         }
     };
 
@@ -142,12 +160,12 @@ const UserList = () => {
                 </thead>
                 <tbody>
                     {loading ? (
-                            <tr>
-                                <td colSpan="10" className="text-center py-4">
-                                    Loading data...
-                                </td>
-                            </tr>
-                        ):users.length === 0 && (
+                        <tr>
+                            <td colSpan="10" className="text-center py-4">
+                                Loading data...
+                            </td>
+                        </tr>
+                    ) : users.length === 0 && (
                         <tr>
                             <td colSpan={4} className="text-center py-4">
                                 No users found.
@@ -167,8 +185,10 @@ const UserList = () => {
                                 >
                                     Edit
                                 </button>
+                           
+
                                 <button
-                                    onClick={() => handleDelete(user.id)}
+                                    onClick={() => handleDelete(user)}
                                     className="bg-red-500 text-white px-2 py-1 rounded cursor-pointer text-sm"
                                 >
                                     Delete
