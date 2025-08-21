@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const mailOptions = {
       from: `"${name}" <${email}>`, // sender info
       to: process.env.MY_EMAIL, // your email to receive messages
-      subject: `New Contact Form Submission from ${name}`,
+      subject: `New Message from GBV Referral from ${name}`,
       text: message,
       html: `<p><strong>Name:</strong> ${name}</p>
              <p><strong>Email:</strong> ${email}</p>
