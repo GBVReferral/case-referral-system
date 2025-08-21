@@ -7,40 +7,51 @@ const ContactDeveloper = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!name || !email || !message) {
-      Swal.fire("Error", "Please fill in all fields.", "error");
-      return;
-    }
+  if (!name || !email || !message) {
+    Swal.fire("Error", "All fields are required.", "error");
+    return;
+  }
 
+  try {
+    setLoading(true);
+
+    const res = await fetch("/api/contactDeveloper", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, message }),
+    });
+
+    // Try parsing JSON, fallback to text
+    let data;
+    const text = await res.text();
     try {
-      setLoading(true);
-
-      const res = await fetch("/api/contactDeveloper", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Failed to send message");
-
-      Swal.fire("Sent!", "Your message has been sent successfully.", "success");
-
-      // reset form
-      setName("");
-      setEmail("");
-      setMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-      Swal.fire("Error", error.message, "error");
-    } finally {
-      setLoading(false);
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(text || "Unknown server error");
     }
-  };
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to send message");
+    }
+
+    Swal.fire("Success!", "Message sent to developer.", "success");
+
+    // reset form
+    setName("");
+    setEmail("");
+    setMessage("");
+
+  } catch (error) {
+    console.error("Error sending message:", error);
+    Swal.fire("Error", error.message, "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 space-y-4 border rounded shadow">
