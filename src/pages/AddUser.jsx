@@ -8,7 +8,6 @@ const AddUser = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [role, setRole] = useState("");
   const [organization, setOrganization] = useState("");
   const [roles, setRoles] = useState([]);
@@ -16,18 +15,15 @@ const AddUser = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchRoles = async () => {
-      const snapshot = await getDocs(collection(db, "roles"));
-      setRoles(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    const fetchRolesAndOrgs = async () => {
+      const [rolesSnapshot, orgsSnapshot] = await Promise.all([
+        getDocs(collection(db, "roles")),
+        getDocs(collection(db, "organizations")),
+      ]);
+      setRoles(rolesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      setOrganizations(orgsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     };
-
-    const fetchOrganizations = async () => {
-      const snapshot = await getDocs(collection(db, "organizations"));
-      setOrganizations(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    };
-
-    fetchRoles();
-    fetchOrganizations();
+    fetchRolesAndOrgs();
   }, []);
 
   const handleAddUser = async (e) => {
@@ -47,7 +43,6 @@ const AddUser = () => {
         body: JSON.stringify({ name, email, password, role, organization }),
       });
 
-      // Handle responses that are not JSON
       const text = await res.text();
       let data;
       try {
@@ -56,9 +51,7 @@ const AddUser = () => {
         throw new Error(text || "Unknown server error");
       }
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create user");
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to create user");
 
       Swal.fire("Success!", "User added successfully!", "success");
 
@@ -68,7 +61,6 @@ const AddUser = () => {
       setPassword("");
       setRole("");
       setOrganization("");
-
     } catch (error) {
       console.error("Error adding user:", error);
       Swal.fire("Error", error.message, "error");
@@ -88,8 +80,8 @@ const AddUser = () => {
           className="border px-2 py-1 w-full"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
           disabled={loading}
+          required
         />
       </div>
 
@@ -104,8 +96,8 @@ const AddUser = () => {
           className="border px-2 py-1 w-full"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
           disabled={loading}
+          required
         />
       </div>
 
@@ -121,8 +113,8 @@ const AddUser = () => {
             className="border px-2 py-1 w-full"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             disabled={loading}
+            required
           />
           <button
             type="button"
@@ -142,8 +134,8 @@ const AddUser = () => {
           className="border px-2 py-1 w-full"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          required
           disabled={loading}
+          required
         >
           <option value="">-- Select Role --</option>
           {roles.map((r) => (
@@ -159,8 +151,8 @@ const AddUser = () => {
           className="border px-2 py-1 w-full"
           value={organization}
           onChange={(e) => setOrganization(e.target.value)}
-          required
           disabled={loading}
+          required
         >
           <option value="">-- Select Organization --</option>
           {organizations.map((org) => (
