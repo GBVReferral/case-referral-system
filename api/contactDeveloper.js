@@ -12,36 +12,32 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Step 1: Configure your SMTP transporter
+    // Create transporter using Gmail SMTP
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, // e.g., smtp.gmail.com
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: true, // true for 465, false for TLS/587
+      service: "gmail",
       auth: {
-        user: process.env.SMTP_USER, // your email
-        pass: process.env.SMTP_PASS, // app password
+        user: process.env.GMAIL_USER, // your Gmail address
+        pass: process.env.GMAIL_PASS, // your Gmail App Password
       },
     });
 
-    // Step 2: Prepare email content
+    // Define email options
     const mailOptions = {
       from: `"${name}" <${email}>`, // sender info
-      to: process.env.DEVELOPER_EMAIL, // your email
-      subject: `Contact Form Message from ${name}`,
-      html: `
-        <h3>New Message from Contact Form</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Message:</strong><br/>${message}</p>
-      `,
+      to: process.env.MY_EMAIL, // your email to receive messages
+      subject: `New Contact Form Submission from ${name}`,
+      text: message,
+      html: `<p><strong>Name:</strong> ${name}</p>
+             <p><strong>Email:</strong> ${email}</p>
+             <p><strong>Message:</strong> ${message}</p>`,
     };
 
-    // Step 3: Send the email
+    // Send the email
     await transporter.sendMail(mailOptions);
 
-    return res.status(200).json({ message: "Message sent successfully" });
+    return res.status(200).json({ success: true, message: "Email sent successfully" });
   } catch (error) {
     console.error("Error sending email:", error);
-    return res.status(500).json({ error: "Failed to send message" });
+    return res.status(500).json({ error: error.message });
   }
 }
