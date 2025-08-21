@@ -1,5 +1,5 @@
 // /api/users/delete.js
-import { adminAuth, adminDb } from "../_firebaseAdmin";
+import { adminAuth, adminDb } from "./_firebaseAdmin";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
