@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen }) {
     >
       <div className="flex gap-x-4 items-center">
 
-        {isOpen && <h1 className="text-white  font-bold">Case Referral System</h1>}
+        {isOpen && <h1 className="text-white  font-bold">GBV Referral System</h1>}
       </div>
       <br />
       <hr />

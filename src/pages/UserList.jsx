@@ -42,7 +42,12 @@ const UserList = () => {
             },
         });
 
-        if (!typedEmail) return; // cancelled
+    
+
+        if (!typedEmail) {
+            Swal.fire("Error", "Type correct email to delete.", "error");
+            return;
+        }
 
         if (typedEmail !== user.email) {
             Swal.fire("Error", "Email does not match! Deletion cancelled.", "error");
