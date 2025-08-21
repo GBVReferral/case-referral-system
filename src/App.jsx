@@ -21,6 +21,7 @@ import AssignSupervisor from "./pages/AssignSupervisor";
 import MyAssignedCases from "./pages/MyAssignedCases";
 import CaseTrackerLogs from "./pages/CaseTrackerLogs";
 import Dashboard from "./pages/Dashboard";
+import ContactDeveloperPage from "./pages/ContactDeveloperPage";
 
 
 
@@ -174,6 +175,7 @@ export default function App() {
                   />
 
                   <Route path="/case-tracker-logs" element={<CaseTrackerLogs />} />
+                  <Route path="/contact-developer" element={<ContactDeveloperPage />} />
 
                   <Route path="/not-authorized" element={<NotAuthorized />} />
                 </Routes>

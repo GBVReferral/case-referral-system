@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen }) {
       <hr />
       <ul className="pt-6">
 
-      
+
         <li className="cursor-pointer">
           <NavLink
             to="/"
@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen }) {
             {isOpen && <span>Dashboard</span>}
           </NavLink>
         </li>
-      
+
 
 
         {
@@ -141,7 +141,7 @@ export default function Sidebar({ isOpen }) {
               </li>
             </>
           )
-       }
+        }
 
 
         <li className="cursor-pointer">
@@ -154,6 +154,19 @@ export default function Sidebar({ isOpen }) {
           >
             <GiPapers />
             {isOpen && <span>Case Tracker Logs</span>}
+          </NavLink>
+        </li>
+        <hr />
+        <li className="cursor-pointer">
+          <NavLink
+            to="/contact-developer"
+            className={({ isActive }) =>
+              `flex items-center gap-x-4 p-2 rounded-md 
+       ${isActive ? "bg-gray-700 text-white" : "text-gray-300 hover:bg-gray-700"}`
+            }
+          >
+            <GiPapers />
+            {isOpen && <span>Contact Developer</span>}
           </NavLink>
         </li>
         <hr />
