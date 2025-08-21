@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
     // Define email options
     const mailOptions = {
-      from: `"${name}" <${email}>`, // sender info
+      from: `GBV Referral Message from "${name}" <${email}>`, // sender info
       to: process.env.MY_EMAIL, // your email to receive messages
       subject: `New Message from GBV Referral from ${name}`,
       text: message,
