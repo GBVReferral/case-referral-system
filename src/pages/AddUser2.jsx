@@ -1,3 +1,5 @@
+// old code snippet
+// src/pages/AddUser2.jsx.
 import { useState, useEffect } from "react";
 import { auth, db } from "../firebase"; // no storage import now!
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
