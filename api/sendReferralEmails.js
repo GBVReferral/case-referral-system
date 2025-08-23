@@ -11,12 +11,12 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Setup nodemailer
+// Setup Nodemailer
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.SMTP_USER, 
-    pass: process.env.SMTP_PASS,
+    user: process.env.SMTP_USER, // Gmail address
+    pass: process.env.SMTP_PASS, // App password
   },
 });
 
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     // Email template with referred-to org name
     const mailOptions = {
       from: `"Case Referral System" <${process.env.SMTP_USER}>`,
-      to: allEmails.join(","), // all users (transparent, not BCC)
+      to: allEmails.join(","), // all users, visible
       subject: `📌 Case Referral: ${referralData.caseCode} → ${referralToOrg}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -68,9 +68,10 @@ export default async function handler(req, res) {
     // Send email
     await transporter.sendMail(mailOptions);
 
+    console.log(`Referral email sent to ${allEmails.join(", ")}`);
     res.status(200).json({ success: true, message: "Emails sent to all users" });
   } catch (error) {
     console.error("Email sending error:", error);
-    res.status(500).json({ error: "Failed to send referral emails" });
+    res.status(500).json({ error: error.message || "Failed to send referral emails" });
   }
 }
