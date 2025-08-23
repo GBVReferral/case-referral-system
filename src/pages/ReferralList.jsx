@@ -18,7 +18,7 @@ const ReferralList = () => {
   const [currentUserOrg, setCurrentUserOrg] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
   const navigate = useNavigate();
 
   const fetchReferrals = async () => {

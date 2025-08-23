@@ -74,6 +74,7 @@ Color Code: ${referralData.clientColorCode}
 Client Info: ${referralData.clientContactInfo}
 Notes: ${referralData.notes}
 Consent Form: ${referralData.consentFormUrl}
+Referred To Org: ${referralToOrg}
 Created By: ${referralData.createdBy} (${referralData.createdByOrg})`,
 
             html: `
@@ -87,6 +88,7 @@ Created By: ${referralData.createdBy} (${referralData.createdByOrg})`,
     <tr><td style="padding: 8px; font-weight: bold;">Notes:</td><td style="padding: 8px;">${referralData.notes}</td></tr>
     <tr><td style="padding: 8px; font-weight: bold;">Consent Form:</td><td style="padding: 8px;"><a href="${referralData.consentFormUrl}" target="_blank">${referralData.consentFormUrl}</a></td></tr>
     <tr><td style="padding: 8px; font-weight: bold;">Created By:</td><td style="padding: 8px;">${referralData.createdBy} (${referralData.createdByOrg})</td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Referred To Org:</td><td style="padding: 8px;">${referralToOrg}</td></tr> 
     </table>
 
     <p style="margin-top: 20px; color: #555;">
