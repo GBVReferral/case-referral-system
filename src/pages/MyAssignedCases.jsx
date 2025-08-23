@@ -4,6 +4,7 @@ import {
     collection,
     query,
     where,
+    getDoc,
     getDocs,
     doc,
     updateDoc
@@ -11,15 +12,24 @@ import {
 import { onAuthStateChanged } from "firebase/auth";
 import Swal from "sweetalert2";
 
+
 const MyAssignedCases = () => {
     const [assignedCases, setAssignedCases] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState("");
 
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setCurrentUserId(user.uid);
+
+                // ✅ Fetch email from Firestore
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setCurrentUserEmail(userDoc.data().email || "");
+                }
             }
         });
 
@@ -130,6 +140,24 @@ const MyAssignedCases = () => {
             progress: progress,
             stageHistory: newHistory
         });
+
+        // Call status update email API
+        try {
+            await fetch("/api/sendCaseUpdateEmails", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    caseCode: referral.caseCode,
+                    updatedStatus: newStatus,
+                    note: note,
+                    updatedBy: referral.assignedSupervisorName || "N/A",
+                    updatedByEmail: currentUserEmail, // fetch auth user email
+                    referredToOrg: referral.referralTo || "" // if you have this field
+                }),
+            });
+        } catch (err) {
+            console.error("Failed to send case update email:", err);
+        }
 
         Swal.fire("Updated!", `Status set to: ${newStatus}`, "success");
 
