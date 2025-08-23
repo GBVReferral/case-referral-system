@@ -53,61 +53,55 @@ const ReferralForm = () => {
     }, []);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        console.log("Submitting with:", currentUserName, currentUserOrg);
-        if (loadingUser) {
-            Swal.fire("Wait!", "User info still loading. Please wait a moment.", "info");
-            return;
-        }
+    e.preventDefault();
+    if (loadingUser) {
+        Swal.fire("Wait!", "User info still loading. Please wait a moment.", "info");
+        return;
+    }
 
-        if (!currentUserName || !currentUserOrg) {
-            Swal.fire("Error", "User info missing. Cannot submit referral.", "error");
-            return;
-        }
+    if (!currentUserName || !currentUserOrg) {
+        Swal.fire("Error", "User info missing. Cannot submit referral.", "error");
+        return;
+    }
 
+    if (!caseCode.trim()) {
+        Swal.fire("Error", "Case Code cannot be empty.", "error");
+        return;
+    }
 
-        if (!caseCode.trim()) {
-            Swal.fire("Error", "Case Code cannot be empty.", "error");
-            return;
-        }
+    const { value: userInput } = await Swal.fire({
+        title: "Confirm Submission",
+        html: `Type the Case Code exactly to confirm: <strong>${caseCode}</strong>`,
+        input: "text",
+        inputPlaceholder: "Enter Case Code exactly",
+        showCancelButton: true,
+        confirmButtonText: "Submit",
+    });
 
-        const { value: userInput } = await Swal.fire({
-            title: "Confirm Submission",
-            html: `Type the Case Code exactly to confirm: <strong>${caseCode}</strong>`,
-            input: "text",
-            inputPlaceholder: "Enter Case Code exactly",
-            showCancelButton: true,
-            confirmButtonText: "Submit",
+    if (!userInput || userInput.trim() !== caseCode.trim()) {
+        Swal.fire("Error", "Case Code does not match.", "error");
+        return;
+    }
+
+    try {
+        // Add referral to Firestore
+        const docRef = await addDoc(collection(db, "referrals"), {
+            referralTo,
+            caseCode,
+            clientColorCode,
+            clientContactInfo,
+            notes,
+            consentFormUrl,
+            dateOfReferral: serverTimestamp(),
+            referralCode: generateReferralCode(),
+            status: "Waiting...",
+            createdBy: currentUserName,
+            createdByOrg: currentUserOrg,
         });
 
-        if (!userInput) {
-            Swal.fire("Error", "You must type the Case Code to confirm.", "error");
-            return;
-        }
-
-        if (userInput.trim() !== caseCode.trim()) {
-            Swal.fire("Error", "Case Code does not match.", "error");
-            return;
-        }
-
-
+        // ✉️ Send email to focal person(s)
         try {
-            await addDoc(collection(db, "referrals"), {
-                referralTo,
-                caseCode,
-                clientColorCode,
-                clientContactInfo,
-                notes,
-                consentFormUrl,
-                dateOfReferral: serverTimestamp(),
-                referralCode: generateReferralCode(),
-                status: "Waiting...",
-                createdBy: currentUserName,
-                createdByOrg: currentUserOrg,
-            });
-
-            // ✉️ Call backend to send referral email
-            await fetch("/api/sendReferralEmails", {
+            const emailRes = await fetch("/api/sendReferralEmails", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -124,24 +118,33 @@ const ReferralForm = () => {
                 })
             });
 
-            Swal.fire(
-                "Success!",
-                `Case has been successfully transferred to ${referralTo}!`,
-                "success"
-            );
+            const emailResult = await emailRes.json();
+            if (!emailRes.ok) console.error("Email API error:", emailResult);
 
-            // Clear form
-            setReferralTo("");
-            setCaseCode("");
-            setClientColorCode("Yellow");
-            setClientContactInfo("");
-            setNotes("");
-            setConsentFormUrl("");
-        } catch (error) {
-            console.error("Error adding referral: ", error);
-            Swal.fire("Error", "Failed to create referral.", "error");
+        } catch (emailErr) {
+            console.error("Failed to send referral email:", emailErr);
         }
-    };
+
+        Swal.fire(
+            "Success!",
+            `Case has been successfully transferred to ${referralTo}!`,
+            "success"
+        );
+
+        // Clear form
+        setReferralTo("");
+        setCaseCode("");
+        setClientColorCode("Yellow");
+        setClientContactInfo("");
+        setNotes("");
+        setConsentFormUrl("");
+
+    } catch (error) {
+        console.error("Error adding referral:", error);
+        Swal.fire("Error", "Failed to create referral.", "error");
+    }
+};
+
 
     const generateReferralCode = () => {
         const prefix = "REF";
