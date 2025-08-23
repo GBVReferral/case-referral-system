@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     // Temporary test email to your own inbox
     await transporter.sendMail({
       from: `"Test" <${process.env.GMAIL_USER}>`,
-      to: "your_email@gmail.com", // replace with your email
+      to: "psmmr.edu@gmail.com", // replace with your email
       subject: "Test Email from GBV Referral API",
       text: "Hello world! This is a test email.",
     });
