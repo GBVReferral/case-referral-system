@@ -79,7 +79,7 @@ Created By: ${referralData.createdBy} (${referralData.createdByOrg})`,
 
             html: `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <h2 style="color: #004085; border-bottom: 2px solid #004085; padding-bottom: 5px;">New Referral Case Assigned</h2>
+    <h2 style="color: #004085; border-bottom: 2px solid #004085; padding-bottom: 5px;">A New Referral Created! </h2>
     
     <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
     <tr><td style="padding: 8px; font-weight: bold; width: 150px;">Case Code:</td><td style="padding: 8px;">${referralData.caseCode}</td></tr>
