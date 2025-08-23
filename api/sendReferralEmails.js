@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { db } from "../firebase"; // adjust path if needed
+import { db } from "../src/firebase.js";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default async function handler(req, res) {
