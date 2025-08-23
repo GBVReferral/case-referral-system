@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { GrContact } from "react-icons/gr";
 
 export default function Sidebar({ isOpen }) {
 
@@ -156,19 +157,7 @@ export default function Sidebar({ isOpen }) {
             {isOpen && <span>Case Tracker Logs</span>}
           </NavLink>
         </li>
-        <hr />
-        <li className="cursor-pointer">
-          <NavLink
-            to="/contact-developer"
-            className={({ isActive }) =>
-              `flex items-center gap-x-4 p-2 rounded-md 
-       ${isActive ? "bg-gray-700 text-white" : "text-gray-300 hover:bg-gray-700"}`
-            }
-          >
-            <GiPapers />
-            {isOpen && <span>Contact Developer</span>}
-          </NavLink>
-        </li>
+        
         <hr />
         {
           (role === "Focal Person") && (
@@ -234,6 +223,19 @@ export default function Sidebar({ isOpen }) {
           </>
 
         )}
+        <hr />
+        <li className="cursor-pointer">
+          <NavLink
+            to="/contact-developer"
+            className={({ isActive }) =>
+              `flex items-center gap-x-4 p-2 rounded-md 
+       ${isActive ? "bg-gray-700 text-white" : "text-gray-300 hover:bg-gray-700"}`
+            }
+          >
+            <GrContact />
+            {isOpen && <span>Contact Developer</span>}
+          </NavLink>
+        </li>
 
       </ul >
 

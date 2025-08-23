@@ -106,6 +106,22 @@ const ReferralForm = () => {
                 createdByOrg: currentUserOrg,
             });
 
+            // ✉️ Call backend to send referral email
+            await fetch("/api/sendReferralEmail", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    referralTo,
+                    caseCode,
+                    clientColorCode,
+                    clientContactInfo,
+                    notes,
+                    consentFormUrl,
+                    createdBy: currentUserName,
+                    createdByOrg: currentUserOrg,
+                }),
+            });
+
             Swal.fire(
                 "Success!",
                 `Case has been successfully transferred to ${referralTo}!`,
