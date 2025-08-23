@@ -107,7 +107,6 @@ const ReferralForm = () => {
             });
 
             // ✉️ Call backend to send referral email
-            console.log("Method:", req.method, "Body:", req.body);
             await fetch("/api/sendReferralEmail", {
                 
                 method: "POST",
