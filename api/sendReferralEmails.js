@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     // Email template with referred-to org name
     const mailOptions = {
       from: `"Case Referral System" <${process.env.SMTP_USER}>`,
-      to: allEmails, // all users (transparent, not BCC)
+      to: allEmails.join(","), // all users (transparent, not BCC)
       subject: `📌 Case Referral: ${referralData.caseCode} → ${referralToOrg}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
