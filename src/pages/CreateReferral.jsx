@@ -108,7 +108,6 @@ const ReferralForm = () => {
 
             // ✉️ Call backend to send referral email
             await fetch("/api/sendReferralEmails", {
-                
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -120,10 +119,9 @@ const ReferralForm = () => {
                         notes,
                         consentFormUrl,
                         createdBy: currentUserName,
-                        createdByOrg: currentUserOrg,
-                    },
-                    focalPersonEmails: ["psmmr.edu@gmail.com"] // example for testing
-                }),
+                        createdByOrg: currentUserOrg
+                    }
+                })
             });
 
             Swal.fire(
