@@ -3,7 +3,11 @@ import { db } from "../firebase"; // adjust path if needed
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default async function handler(req, res) {
+  console.log("API invoked. Method:", req.method);
+  console.log("Request body:", req.body);
+
   if (req.method !== "POST") {
+    console.log("Method not allowed");
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
@@ -11,25 +15,34 @@ export default async function handler(req, res) {
     const { referralToOrg, referralData } = req.body;
 
     if (!referralToOrg || !referralData) {
+      console.log("Missing referralToOrg or referralData");
       return res.status(400).json({ error: "Missing referralToOrg or referralData" });
     }
 
-    // 1️⃣ Query Firestore for focal persons in the target organization
+    console.log("Referral to organization:", referralToOrg);
+    console.log("Referral data:", referralData);
+
     const usersRef = collection(db, "users");
     const q = query(
       usersRef,
       where("organization", "==", referralToOrg),
       where("role", "==", "Focal Person")
     );
+
+    console.log("Running Firestore query...");
     const querySnapshot = await getDocs(q);
 
+    console.log("Query snapshot:", querySnapshot);
+
     if (querySnapshot.empty) {
-      return res.status(404).json({ error: `No focal persons found for ${referralToOrg}` });
+      console.log("No focal persons found");
+      return res.status(404).json({ error: "No focal persons found" });
     }
 
     const focalEmails = querySnapshot.docs.map(doc => doc.data().email);
+    console.log("Focal emails:", focalEmails);
 
-    // 2️⃣ Setup Nodemailer transporter
+    // Nodemailer setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -38,40 +51,23 @@ export default async function handler(req, res) {
       },
     });
 
-    // 3️⃣ Send emails to all focal persons
-    const sendPromises = focalEmails.map(email =>
-      transporter.sendMail({
-        from: `"GBV Referral System" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: `New Referral Case: ${referralData.caseCode}`,
-        text: `
-A new case has been referred.
-
-Case Code: ${referralData.caseCode}
-Color Code: ${referralData.clientColorCode}
-Client Info: ${referralData.clientContactInfo}
-Notes: ${referralData.notes}
-Consent Form: ${referralData.consentFormUrl}
-Created By: ${referralData.createdBy} (${referralData.createdByOrg})
-        `,
-        html: `
-<h3>New Referral Case</h3>
-<p><strong>Case Code:</strong> ${referralData.caseCode}</p>
-<p><strong>Color Code:</strong> ${referralData.clientColorCode}</p>
-<p><strong>Client Info:</strong> ${referralData.clientContactInfo}</p>
-<p><strong>Notes:</strong> ${referralData.notes}</p>
-<p><strong>Consent Form:</strong> <a href="${referralData.consentFormUrl}">${referralData.consentFormUrl}</a></p>
-<p><strong>Created By:</strong> ${referralData.createdBy} (${referralData.createdByOrg})</p>
-        `,
-      })
+    console.log("Sending emails...");
+    await Promise.all(
+      focalEmails.map(email =>
+        transporter.sendMail({
+          from: `"GBV Referral System" <${process.env.GMAIL_USER}>`,
+          to: email,
+          subject: `New Referral Case: ${referralData.caseCode}`,
+          text: `Referral case info...`,
+        })
+      )
     );
 
-    await Promise.all(sendPromises);
-
-    return res.status(200).json({ success: true, message: "Emails sent to focal persons" });
-
+    console.log("Emails sent successfully");
+    return res.status(200).json({ success: true, message: "Emails sent" });
   } catch (err) {
-    console.error("Error sending referral emails:", err);
+    console.error("ERROR in API:", err);
     return res.status(500).json({ error: err.message });
   }
 }
+
