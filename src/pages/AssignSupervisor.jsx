@@ -20,6 +20,7 @@ export default function AssignSupervisor() {
   const [supervisors, setSupervisors] = useState([]);
   const [selectedReferralId, setSelectedReferralId] = useState("");
   const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
+  const [selectedSupervisorEmail, setSelectedSupervisorEmail] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -74,6 +75,7 @@ export default function AssignSupervisor() {
       await updateDoc(doc(db, "referrals", selectedReferralId), {
         assignedSupervisorId: selectedSupervisorId,
         assignedSupervisorName: supervisor.name,
+        assignedSupervisorEmail: supervisor.email,
         assignedAt: serverTimestamp(),
       });
       Swal.fire("Success", "Supervisor assigned!", "success");
@@ -111,17 +113,33 @@ export default function AssignSupervisor() {
           <label className="block font-bold">Select Supervisor</label>
           <select
             value={selectedSupervisorId}
-            onChange={(e) => setSelectedSupervisorId(e.target.value)}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedSupervisorId(id);
+
+              // Find the selected supervisor in the array and set email
+              const supervisor = supervisors.find((s) => s.id === id);
+              setSelectedSupervisorEmail(supervisor?.email || "No email found");
+            }}
             className="border px-2 py-1 w-full"
           >
             <option value="">-- Select Supervisor --</option>
-            {supervisors.map(s => (
+            {supervisors.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {s.name} ({s.email || "no-email"})
               </option>
             ))}
           </select>
+
+          {/* Display the supervisor's email */}
+          {selectedSupervisorEmail && (
+            <p className="mt-2 text-sm text-gray-700">
+              Email: <strong>{selectedSupervisorEmail}</strong>
+            </p>
+          )}
         </div>
+
+
 
         <button
           type="submit"
