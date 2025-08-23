@@ -39,7 +39,7 @@ const ContactDeveloper = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 w-96">
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 w-1/2 mx-auto">
       <input
         type="text"
         placeholder="Name"
@@ -58,7 +58,7 @@ const ContactDeveloper = () => {
         placeholder="Message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        className="border p-2 w-full"
+        className="border p-2 w-full h-40"
       />
       <button
         type="submit"
