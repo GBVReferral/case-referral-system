@@ -107,18 +107,23 @@ const ReferralForm = () => {
             });
 
             // ✉️ Call backend to send referral email
+            console.log("Method:", req.method, "Body:", req.body);
             await fetch("/api/sendReferralEmail", {
+                
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    referralTo,
-                    caseCode,
-                    clientColorCode,
-                    clientContactInfo,
-                    notes,
-                    consentFormUrl,
-                    createdBy: currentUserName,
-                    createdByOrg: currentUserOrg,
+                    referralToOrg: referralTo,
+                    referralData: {
+                        caseCode,
+                        clientColorCode,
+                        clientContactInfo,
+                        notes,
+                        consentFormUrl,
+                        createdBy: currentUserName,
+                        createdByOrg: currentUserOrg,
+                    },
+                    focalPersonEmails: ["psmmr.edu@gmail.com"] // example for testing
                 }),
             });
 
