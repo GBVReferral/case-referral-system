@@ -1,77 +1,112 @@
-import admin from "firebase-admin";
+// /api/sendReferralEmails.js
 import nodemailer from "nodemailer";
+import admin from "firebase-admin";
 
-// Initialize Firebase Admin once
+// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_KEY_JSON);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+    admin.initializeApp({
+        credential: admin.credential.cert(
+            JSON.parse(process.env.FIREBASE_ADMIN_KEY_JSON)
+        ),
+    });
 }
 
 const db = admin.firestore();
 
-// Setup Nodemailer
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER, // Gmail address
-    pass: process.env.SMTP_PASS, // App password
-  },
-});
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+    console.log("API invoked. Method:", req.method);
 
-  try {
-    const { referralToOrg, referralData } = req.body;
-
-    if (!referralToOrg || !referralData) {
-      return res.status(400).json({ error: "Missing referral data" });
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    // 🔹 Get all user emails (admins + normal users)
-    const usersSnapshot = await db.collection("users").get();
-    const allEmails = usersSnapshot.docs
-      .map((doc) => doc.data().email)
-      .filter((email) => !!email);
+    try {
+        const { referralToOrg, referralData } = req.body;
+        console.log("Request body:", req.body);
 
-    if (allEmails.length === 0) {
-      return res.status(400).json({ error: "No user emails found" });
+        if (!referralToOrg || !referralData || !referralData.createdByEmail) {
+            return res
+                .status(400)
+                .json({ error: "Missing referralToOrg, referralData, or createdByEmail" });
+        }
+
+        // ✅ Fetch ALL users from Firestore
+        const usersRef = db.collection("users");
+        const allUsersSnapshot = await usersRef.get();
+
+        if (allUsersSnapshot.empty) {
+            console.log("No users found in system.");
+            return res
+                .status(404)
+                .json({ error: "No users found in system" });
+        }
+
+        // ✅ Collect every user’s email
+        const allEmails = allUsersSnapshot.docs
+            .map((doc) => doc.data().email)
+            .filter((email) => !!email); // remove null/undefined
+
+        console.log("All user emails:", allEmails);
+
+        // ✅ Add referrer (to avoid missing them if not in users)
+        if (!allEmails.includes(referralData.createdByEmail)) {
+            allEmails.push(referralData.createdByEmail);
+        }
+
+        // Setup Nodemailer
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_PASS,
+            },
+        });
+
+        // Send a single email to all users
+        await transporter.sendMail({
+            from: `"GBV Referral System" <${process.env.GMAIL_USER}>`,
+            to: allEmails.join(", "), // 👈 Everyone will see all recipients
+            subject: `New Referral Case: ${referralData.caseCode}`,
+            text: `A new referral has been created.
+
+Case Code: ${referralData.caseCode}
+Color Code: ${referralData.clientColorCode}
+Client Info: ${referralData.clientContactInfo}
+Notes: ${referralData.notes}
+Consent Form: ${referralData.consentFormUrl}
+Created By: ${referralData.createdBy} (${referralData.createdByOrg})`,
+
+            html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <h2 style="color: #004085; border-bottom: 2px solid #004085; padding-bottom: 5px;">New Referral Case Assigned</h2>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+    <tr><td style="padding: 8px; font-weight: bold; width: 150px;">Case Code:</td><td style="padding: 8px;">${referralData.caseCode}</td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Color Code:</td><td style="padding: 8px;">${referralData.clientColorCode}</td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Client Info:</td><td style="padding: 8px;">${referralData.clientContactInfo}</td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Notes:</td><td style="padding: 8px;">${referralData.notes}</td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Consent Form:</td><td style="padding: 8px;"><a href="${referralData.consentFormUrl}" target="_blank">${referralData.consentFormUrl}</a></td></tr>
+    <tr><td style="padding: 8px; font-weight: bold;">Created By:</td><td style="padding: 8px;">${referralData.createdBy} (${referralData.createdByOrg})</td></tr>
+    </table>
+
+    <p style="margin-top: 20px; color: #555;">
+        Please review this referral promptly and take necessary actions. 
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;" />
+
+    <p style="font-size: 12px; color: #777;">
+        This is an automated notification from the GBV Referral System.
+    </p>
+</div>
+`
+        });
+
+        console.log("Emails sent successfully to all users");
+        return res.status(200).json({ success: true, message: "Emails sent to all users" });
+
+    } catch (err) {
+        console.error("API error:", err);
+        return res.status(500).json({ error: err.message });
     }
-
-    // Email template with referred-to org name
-    const mailOptions = {
-      from: `"Case Referral System" <${process.env.SMTP_USER}>`,
-      to: allEmails.join(","), // all users, visible
-      subject: `📌 Case Referral: ${referralData.caseCode} → ${referralToOrg}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2 style="color: #2c3e50;">📌 New Case Referral</h2>
-          <p>A case has been referred in the system. Please find details below:</p>
-          <table style="border-collapse: collapse; width: 100%; margin-top: 15px;">
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Case Code</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralData.caseCode}</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Client Color Code</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralData.clientColorCode}</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Client Contact Info</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralData.clientContactInfo}</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Notes</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralData.notes}</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Consent Form</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><a href="${referralData.consentFormUrl}" target="_blank">View Form</a></td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Referred By</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralData.createdBy} (${referralData.createdByOrg})</td></tr>
-            <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Referred To Org</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${referralToOrg}</td></tr>
-          </table>
-          <p style="margin-top:20px;">Regards,<br>Case Referral System</p>
-        </div>
-      `,
-    };
-
-    // Send email
-    await transporter.sendMail(mailOptions);
-
-    console.log(`Referral email sent to ${allEmails.join(", ")}`);
-    res.status(200).json({ success: true, message: "Emails sent to all users" });
-  } catch (error) {
-    console.error("Email sending error:", error);
-    res.status(500).json({ error: error.message || "Failed to send referral emails" });
-  }
 }

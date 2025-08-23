@@ -14,10 +14,10 @@ const ReferralForm = () => {
 
     const [currentUserName, setCurrentUserName] = useState("");
     const [currentUserOrg, setCurrentUserOrg] = useState("");
-    const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [loadingUser, setLoadingUser] = useState(true);
 
     const [organizations, setOrganizations] = useState([]);
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,7 +27,6 @@ const ReferralForm = () => {
                 // Load logged in user info
                 const unsubscribe = onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        setCurrentUserEmail(user.email || "");
                         const userDoc = await getDoc(doc(db, "users", user.uid));
                         if (userDoc.exists()) {
                             setCurrentUserOrg(userDoc.data().organization || "");
@@ -42,6 +41,7 @@ const ReferralForm = () => {
                 setOrganizations(orgsList);
 
                 setLoadingUser(false);
+
                 return unsubscribe;
             } catch (error) {
                 console.error("Error fetching organizations:", error);
@@ -53,105 +53,98 @@ const ReferralForm = () => {
     }, []);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (loadingUser) {
-            Swal.fire("Wait!", "User info still loading. Please wait a moment.", "info");
-            return;
-        }
+    e.preventDefault();
+    if (loadingUser) {
+        Swal.fire("Wait!", "User info still loading. Please wait a moment.", "info");
+        return;
+    }
 
-        if (!currentUserName || !currentUserOrg || !currentUserEmail) {
-            Swal.fire("Error", "User info missing. Cannot submit referral.", "error");
-            return;
-        }
+    if (!currentUserName || !currentUserOrg) {
+        Swal.fire("Error", "User info missing. Cannot submit referral.", "error");
+        return;
+    }
 
-        if (!caseCode.trim()) {
-            Swal.fire("Error", "Case Code cannot be empty.", "error");
-            return;
-        }
+    if (!caseCode.trim()) {
+        Swal.fire("Error", "Case Code cannot be empty.", "error");
+        return;
+    }
 
-        const { value: userInput } = await Swal.fire({
-            title: "Confirm Submission",
-            html: `Type the Case Code exactly to confirm: <strong>${caseCode}</strong>`,
-            input: "text",
-            inputPlaceholder: "Enter Case Code exactly",
-            showCancelButton: true,
-            confirmButtonText: "Submit",
+    const { value: userInput } = await Swal.fire({
+        title: "Confirm Submission",
+        html: `Type the Case Code exactly to confirm: <strong>${caseCode}</strong>`,
+        input: "text",
+        inputPlaceholder: "Enter Case Code exactly",
+        showCancelButton: true,
+        confirmButtonText: "Submit",
+    });
+
+    if (!userInput || userInput.trim() !== caseCode.trim()) {
+        Swal.fire("Error", "Case Code does not match.", "error");
+        return;
+    }
+
+    try {
+        // Add referral to Firestore
+        const docRef = await addDoc(collection(db, "referrals"), {
+            referralTo,
+            caseCode,
+            clientColorCode,
+            clientContactInfo,
+            notes,
+            consentFormUrl,
+            dateOfReferral: serverTimestamp(),
+            referralCode: generateReferralCode(),
+            status: "Waiting...",
+            createdBy: currentUserName,
+            createdByOrg: currentUserOrg,
         });
 
-        if (!userInput || userInput.trim() !== caseCode.trim()) {
-            Swal.fire("Error", "Case Code does not match.", "error");
-            return;
-        }
-
+        // ✉️ Send email to focal person(s)
         try {
-            // Add referral to Firestore
-            await addDoc(collection(db, "referrals"), {
-                referralTo,
-                caseCode,
-                clientColorCode,
-                clientContactInfo,
-                notes,
-                consentFormUrl,
-                dateOfReferral: serverTimestamp(),
-                referralCode: generateReferralCode(),
-                status: "Waiting...",
-                createdBy: currentUserName,
-                createdByOrg: currentUserOrg,
+            const emailRes = await fetch("/api/sendReferralEmails", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    referralToOrg: referralTo,
+                    referralData: {
+                        caseCode,
+                        clientColorCode,
+                        clientContactInfo,
+                        notes,
+                        consentFormUrl,
+                        createdBy: currentUserName,
+                        createdByOrg: currentUserOrg
+                    }
+                })
             });
 
-            // ✅ Fetch ALL user emails (admins + normal users)
-            const usersSnapshot = await getDocs(collection(db, "users"));
-            const allUserEmails = usersSnapshot.docs
-                .map((doc) => doc.data().email)
-                .filter((email) => email); // remove nulls
+            const emailResult = await emailRes.json();
+            if (!emailRes.ok) console.error("Email API error:", emailResult);
 
-            // ✉️ Send email to ALL users
-            try {
-                const emailRes = await fetch("/api/sendReferralEmails", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        referralToOrg: referralTo,
-                        allRecipients: allUserEmails, // 👈 NEW
-                        referralData: {
-                            caseCode,
-                            clientColorCode,
-                            clientContactInfo,
-                            notes,
-                            consentFormUrl,
-                            createdBy: currentUserName,
-                            createdByOrg: currentUserOrg,
-                            createdByEmail: currentUserEmail
-                        }
-                    })
-                });
-
-                const emailResult = await emailRes.json();
-                if (!emailRes.ok) console.error("Email API error:", emailResult);
-
-            } catch (emailErr) {
-                console.error("Failed to send referral email:", emailErr);
-            }
-
-            Swal.fire(
-                "Success!",
-                `Case has been successfully transferred to ${referralTo}!`,
-                "success"
-            );
-
-            // Clear form
-            setReferralTo("");
-            setCaseCode("");
-            setClientColorCode("Yellow");
-            setClientContactInfo("");
-            setNotes("");
-            setConsentFormUrl("");
-
-        } catch (error) {
-            console.error("Error adding referral:", error);
-            Swal.fire("Error", "Failed to create referral.", "error");
+        } catch (emailErr) {
+            console.error("Failed to send referral email:", emailErr);
         }
-    };
+
+        Swal.fire(
+            "Success!",
+            `Case has been successfully transferred to ${referralTo}!`,
+            "success"
+        );
+
+        // Clear form
+        setReferralTo("");
+        setCaseCode("");
+        setClientColorCode("Yellow");
+        setClientContactInfo("");
+        setNotes("");
+        setConsentFormUrl("");
+
+    } catch (error) {
+        console.error("Error adding referral:", error);
+        Swal.fire("Error", "Failed to create referral.", "error");
+    }
+};
+
 
     const generateReferralCode = () => {
         const prefix = "REF";
@@ -178,6 +171,7 @@ const ReferralForm = () => {
                         >
                             <option value="">-- Select Organization --</option>
                             {organizations
+                                // to avoid referring to the current user's organization
                                 .filter((org) => org !== currentUserOrg)
                                 .map((org) => (
                                     <option key={org} value={org}>
