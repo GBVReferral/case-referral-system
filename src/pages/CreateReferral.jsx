@@ -14,7 +14,7 @@ const ReferralForm = () => {
 
     const [currentUserName, setCurrentUserName] = useState("");
     const [currentUserOrg, setCurrentUserOrg] = useState("");
-    const [currentUserEmail, setCurrentUserEmail] = useState(""); // NEW
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [loadingUser, setLoadingUser] = useState(true);
 
     const [organizations, setOrganizations] = useState([]);
@@ -85,7 +85,7 @@ const ReferralForm = () => {
 
         try {
             // Add referral to Firestore
-            const docRef = await addDoc(collection(db, "referrals"), {
+            await addDoc(collection(db, "referrals"), {
                 referralTo,
                 caseCode,
                 clientColorCode,
@@ -99,13 +99,20 @@ const ReferralForm = () => {
                 createdByOrg: currentUserOrg,
             });
 
-            // ✉️ Send email to focal person(s) and referrer
+            // ✅ Fetch ALL user emails (admins + normal users)
+            const usersSnapshot = await getDocs(collection(db, "users"));
+            const allUserEmails = usersSnapshot.docs
+                .map((doc) => doc.data().email)
+                .filter((email) => email); // remove nulls
+
+            // ✉️ Send email to ALL users
             try {
                 const emailRes = await fetch("/api/sendReferralEmails", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         referralToOrg: referralTo,
+                        allRecipients: allUserEmails, // 👈 NEW
                         referralData: {
                             caseCode,
                             clientColorCode,
@@ -114,7 +121,7 @@ const ReferralForm = () => {
                             consentFormUrl,
                             createdBy: currentUserName,
                             createdByOrg: currentUserOrg,
-                            createdByEmail: currentUserEmail // NEW
+                            createdByEmail: currentUserEmail
                         }
                     })
                 });
