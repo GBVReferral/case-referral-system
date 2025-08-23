@@ -107,7 +107,7 @@ const ReferralForm = () => {
             });
 
             // ✉️ Call backend to send referral email
-            await fetch("/api/sendReferralEmail", {
+            await fetch("/api/sendReferralEmails", {
                 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
