@@ -13,6 +13,7 @@ const ReferralForm = () => {
     const [consentFormUrl, setConsentFormUrl] = useState("");
 
     const [currentUserName, setCurrentUserName] = useState("");
+    const [currentUserEmail, setCurrentUserEmail] = useState("");
     const [currentUserOrg, setCurrentUserOrg] = useState("");
     const [loadingUser, setLoadingUser] = useState(true);
 
@@ -31,6 +32,7 @@ const ReferralForm = () => {
                         if (userDoc.exists()) {
                             setCurrentUserOrg(userDoc.data().organization || "");
                             setCurrentUserName(userDoc.data().name || "");
+                            setCurrentUserEmail(userDoc.data().email || "");
                         }
                     }
                 });
@@ -97,6 +99,7 @@ const ReferralForm = () => {
             status: "Waiting...",
             createdBy: currentUserName,
             createdByOrg: currentUserOrg,
+            createdByEmail: currentUserEmail,
         });
 
         // ✉️ Send email to focal person(s)
@@ -113,7 +116,8 @@ const ReferralForm = () => {
                         notes,
                         consentFormUrl,
                         createdBy: currentUserName,
-                        createdByOrg: currentUserOrg
+                        createdByOrg: currentUserOrg,
+                        createdByEmail: currentUserEmail,
                     }
                 })
             });
