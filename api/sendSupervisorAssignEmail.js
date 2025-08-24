@@ -1,53 +1,46 @@
-// app/api/sendSupervisorAssignEmail/route.js
-import admin from "firebase-admin";
 import nodemailer from "nodemailer";
+import admin from "firebase-admin";
 
-// --- Initialize Firebase Admin exactly once ---
+// Initialize Firebase Admin SDK once
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Note: keep the literal "\n" from env and convert to real newlines
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_ADMIN_KEY_JSON)
+    ),
   });
 }
 
-// Optional: force Node runtime (avoids Edge where nodemailer won't run)
-// export const runtime = "nodejs";
+const db = admin.firestore();
 
-export async function POST(req) {
+export default async function handler(req, res) {
+  console.log("sendSupervisorEmail API invoked. Method:", req.method);
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
   try {
-    // ---- (Optional) Verify Firebase Auth token ----
-    // Enable by setting REQUIRE_FIREBASE_AUTH=true in your .env
-    if (process.env.REQUIRE_FIREBASE_AUTH === "true") {
-      const authHeader = req.headers.get("authorization") || "";
-      const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : null;
-      if (!token) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-        });
-      }
-      await admin.auth().verifyIdToken(token);
+    const { caseCode, updatedStatus, note, updatedBy, updatedByEmail, assignedSupervisorId } =
+      req.body;
+
+    if (!caseCode || !updatedStatus || !updatedBy || !updatedByEmail || !assignedSupervisorId) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Accept both "message" (plain text) and "html" (prebuilt HTML)
-    const { to, subject, message, html } = await req.json();
-
-    if (!to || !subject || (!message && !html)) {
-      return new Response(JSON.stringify({ error: "Missing fields" }), {
-        status: 400,
-      });
+    // ✅ Fetch supervisor from Firestore
+    const supervisorDoc = await db.collection("users").doc(assignedSupervisorId).get();
+    if (!supervisorDoc.exists) {
+      return res.status(404).json({ error: "Assigned supervisor not found" });
     }
 
-    // --- Nodemailer transporter (Gmail) ---
-    // Gmail requires an App Password if 2FA is enabled.
-    // .env:
-    //   GMAIL_USER="youraddress@gmail.com"
-    //   GMAIL_PASS="your_gmail_app_password"
+    const supervisor = supervisorDoc.data();
+    const supervisorEmail = supervisor.email;
+
+    if (!supervisorEmail) {
+      return res.status(400).json({ error: "Supervisor has no email" });
+    }
+
+    // Setup Nodemailer
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -56,34 +49,28 @@ export async function POST(req) {
       },
     });
 
-    // Build a nice HTML wrapper if only "message" is provided
-    const htmlBody =
-      html ??
-      `
-      <div style="font-family: Arial, sans-serif; padding: 16px; border:1px solid #ddd; border-radius:8px;">
-        <h2 style="color:#2563eb; margin-top:0;">Case Assignment Notification</h2>
-        <p>Dear Supervisor,</p>
-        <p>${(message || "").replace(/\n/g, "<br/>")}</p>
-        <p style="font-size:12px; color:#6b7280; margin-top:24px;">
-          This is an automated message from the Case Management System.
-        </p>
-      </div>
-    `;
-
+    // Send email ONLY to supervisor
     await transporter.sendMail({
-      from: `"Case Management System" <${process.env.GMAIL_USER}>`,
-      to,
-      subject,
-      text: message ?? "Please view this email in HTML.",
-      html: htmlBody,
+      from: `"GBV Referral System" <${process.env.GMAIL_USER}>`,
+      to: supervisorEmail,
+      subject: `New Case Assigned: ${caseCode}`,
+      text: `Dear ${supervisor.name},
+
+You have been assigned a new case.
+
+Case Code: ${caseCode}
+Status: ${updatedStatus}
+Note: ${note}
+Assigned By: ${updatedBy} (${updatedByEmail})
+
+Please log in to the system to review and take action.
+      `,
     });
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
-  } catch (error) {
-    console.error("Email API error:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to send supervisor email" }),
-      { status: 500 }
-    );
+    console.log("Email sent to supervisor:", supervisorEmail);
+    return res.status(200).json({ success: true, message: "Email sent to assigned supervisor" });
+  } catch (err) {
+    console.error("Supervisor Email API error:", err);
+    return res.status(500).json({ error: err.message });
   }
 }

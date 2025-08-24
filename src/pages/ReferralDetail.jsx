@@ -231,6 +231,21 @@ const ReferralDetail = () => {
 
             Swal.fire("Assigned!", "Supervisor has been assigned.", "success");
 
+
+            // Assigning a supervisor should also send them an email notification
+            await fetch("/api/sendSupervisorAssignEmail", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    caseCode: referral.caseCode,
+                    updatedStatus: "Assigned",
+                    note: assignNotes,
+                    updatedBy: approverName,
+                    updatedByEmail: user.email,
+                    assignedSupervisorId: selectedSupervisorId, // 👈 important
+                }),
+            });
+
             setReferral((prev) => ({
                 ...prev,
                 status: "Assigned",
