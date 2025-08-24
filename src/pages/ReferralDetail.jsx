@@ -221,12 +221,27 @@ const ReferralDetail = () => {
         }
 
         try {
+            // ✅ get current user like in handleApprove
+            const user = auth.currentUser;
+            let assignerName = "", assignerOrg = "";
+
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    assignerName = userDoc.data().name || "";
+                    assignerOrg = userDoc.data().organization || "";
+                }
+            }
+
             await updateDoc(doc(db, "referrals", id), {
                 assignedSupervisorId: selectedSupervisorId,
                 assignedSupervisorName: supervisor.name,
+                assignedSupervisorEmail: supervisor.email || "",
                 assignNotes: assignNotes,
                 assignedAt: serverTimestamp(),
                 status: "Assigned",
+                assignedBy: assignerName, // optional tracking
+                assignedByOrg: assignerOrg,
             });
 
             Swal.fire("Assigned!", "Supervisor has been assigned.", "success");
@@ -235,7 +250,9 @@ const ReferralDetail = () => {
                 ...prev,
                 status: "Assigned",
                 assignedSupervisorName: supervisor.name,
+                assignedSupervisorEmail: supervisor.email || "",
                 assignNotes: assignNotes,
+                assignedBy: assignerName,
             }));
 
             // ✅ Reset form
