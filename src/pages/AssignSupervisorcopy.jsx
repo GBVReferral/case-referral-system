@@ -19,8 +19,9 @@ export default function AssignSupervisor() {
   const [approvedReferrals, setApprovedReferrals] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
   const [selectedReferralId, setSelectedReferralId] = useState("");
-  const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
+  const [selectedSupervisor, setSelectedSupervisor] = useState(null); // store as object
 
+  // Get current user info
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -35,50 +36,52 @@ export default function AssignSupervisor() {
     return unsubscribe;
   }, []);
 
+  // Fetch referrals and supervisors
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUserOrg) return;
 
-      // 1️⃣ Approved referrals not yet assigned
+      // Approved referrals
       const q1 = query(
         collection(db, "referrals"),
         where("referralTo", "==", currentUserOrg),
         where("status", "==", "Approved"),
-        where("assignedSupervisorId", "==", null) // unassigned only
+        where("assignedSupervisorId", "==", null)
       );
       const snapshot1 = await getDocs(q1);
       setApprovedReferrals(snapshot1.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      // 2️⃣ Supervisors in same org
+      // Supervisors
       const q2 = query(
         collection(db, "users"),
         where("role", "==", "Case Supervisor"),
         where("organization", "==", currentUserOrg)
       );
       const snapshot2 = await getDocs(q2);
-      setSupervisors(snapshot2.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const supervisorsList = snapshot2.docs.map(doc => doc.data());
+      setSupervisors(supervisorsList);
     };
 
-    if (currentUserOrg) fetchData();
+    fetchData();
   }, [currentUserOrg]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedReferralId || !selectedSupervisorId) {
+    if (!selectedReferralId || !selectedSupervisor) {
       Swal.fire("Error", "Please select both referral and supervisor", "error");
       return;
     }
 
-    const supervisor = supervisors.find(s => s.id === selectedSupervisorId);
     try {
       await updateDoc(doc(db, "referrals", selectedReferralId), {
-        assignedSupervisorId: selectedSupervisorId,
-        assignedSupervisorName: supervisor.name,
+        assignedSupervisorId: selectedSupervisor.uid,
+        assignedSupervisorName: selectedSupervisor.name,
+        assignedSupervisorEmail: selectedSupervisor.email,
         assignedAt: serverTimestamp(),
       });
       Swal.fire("Success", "Supervisor assigned!", "success");
       setSelectedReferralId("");
-      setSelectedSupervisorId("");
+      setSelectedSupervisor(null);
     } catch (err) {
       console.error(err);
       Swal.fire("Error", "Failed to assign supervisor.", "error");
@@ -91,6 +94,8 @@ export default function AssignSupervisor() {
     <div className="max-w-xl mx-auto p-4">
       <h2 className="text-xl font-bold mb-4">Assign Case Supervisor</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Referral select */}
         <div>
           <label className="block font-bold">Select Referral</label>
           <select
@@ -107,21 +112,34 @@ export default function AssignSupervisor() {
           </select>
         </div>
 
+        {/* Supervisor select */}
         <div>
           <label className="block font-bold">Select Supervisor</label>
           <select
-            value={selectedSupervisorId}
-            onChange={(e) => setSelectedSupervisorId(e.target.value)}
+            value={selectedSupervisor?.uid || ""}
+            onChange={(e) => {
+              const selected = supervisors.find(s => s.uid === e.target.value);
+              setSelectedSupervisor(selected || null);
+            }}
             className="border px-2 py-1 w-full"
           >
             <option value="">-- Select Supervisor --</option>
-            {supervisors.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+            {supervisors.map((s) => (
+              <option key={s.uid} value={s.uid}>
+                {s.name} | {s.email}
               </option>
             ))}
           </select>
+
+          {/* Live display */}
+          {selectedSupervisor && (
+            <p className="mt-2 text-sm text-gray-700">
+              Selected: <strong>{selectedSupervisor.name} | {selectedSupervisor.email}</strong>
+            </p>
+          )}
         </div>
+        <p>{s.email}</p>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Repellat necessitatibus, tenetur, et ab consequatur impedit laborum quae aspernatur doloribus sed harum exercitationem obcaecati, corrupti expedita deleniti? Adipisci commodi doloremque quidem.</p>
 
         <button
           type="submit"
