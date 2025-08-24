@@ -231,20 +231,6 @@ const ReferralDetail = () => {
 
             Swal.fire("Assigned!", "Supervisor has been assigned.", "success");
 
-
-            // Assigning a supervisor should also send them an email notification
-            await fetch("/api/sendSupervisorAssignEmail", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    caseCode: referral.caseCode,
-                    updatedStatus: "Assigned",
-                    note: assignNotes,
-                    updatedByEmail: user.email,
-                    assignedSupervisorId: selectedSupervisorId, // 👈 important
-                }),
-            });
-
             setReferral((prev) => ({
                 ...prev,
                 status: "Assigned",
@@ -394,27 +380,10 @@ const ReferralDetail = () => {
                                 >
                                     <option value="">-- Select Supervisor --</option>
                                     {supervisors.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name} | {s.email}
-                                        </option>
+                                        <option key={s.id} value={s.id}>{s.name} | {s.email}</option>
                                     ))}
                                 </select>
                             </div>
-
-                            {/* ✅ Live preview of selected supervisor */}
-                            {selectedSupervisorId && (
-                                <div className="mt-2 text-sm text-gray-700">
-                                    {(() => {
-                                        const sup = supervisors.find((s) => s.id === selectedSupervisorId);
-                                        return sup ? (
-                                            <p>
-                                                Selected: <strong>{sup.name}</strong> ({sup.email})
-                                            </p>
-                                        ) : null;
-                                    })()}
-                                </div>
-                            )}
-
                             <div>
                                 <label className="block font-bold">Notes</label>
                                 <textarea
@@ -423,10 +392,7 @@ const ReferralDetail = () => {
                                     className="border px-2 py-1 w-full"
                                 />
                             </div>
-                            <button
-                                type="submit"
-                                className="bg-blue-600 text-white px-4 py-2 rounded"
-                            >
+                            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
                                 Assign
                             </button>
                         </form>
@@ -435,16 +401,10 @@ const ReferralDetail = () => {
                 {/* ✅ Show assign info if already assigned */}
                 {referral.assignedSupervisorName && (
                     <div className="mt-4">
-                        <p>
-                            <strong>Assigned Supervisor:</strong>{" "}
-                            {referral.assignedSupervisorName} ({referral.assignedSupervisorEmail})
-                        </p>
-                        <p>
-                            <strong>Assign Notes:</strong> {referral.assignNotes}
-                        </p>
+                        <p><strong>Assigned Supervisor:</strong> {referral.assignedSupervisorName}</p>
+                        <p><strong>Assign Notes:</strong> {referral.assignNotes}</p>
                     </div>
                 )}
-
             </div>
         </div>
     );
