@@ -1,7 +1,8 @@
+// /api/sendSupervisorEmail.js
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
 
-// Initialize Firebase Admin SDK once
+// ✅ Initialize Firebase Admin SDK (only once)
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(
@@ -13,34 +14,38 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export default async function handler(req, res) {
-  console.log("sendSupervisorEmail API invoked. Method:", req.method);
+  console.log("Supervisor Email API invoked:", req.method);
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
-    const { caseCode, updatedStatus, note, updatedBy, updatedByEmail, assignedSupervisorId } =
-      req.body;
+    const { supervisorId, referralData } = req.body;
+    console.log("Request body:", req.body);
 
-    if (!caseCode || !updatedStatus || !updatedBy || !updatedByEmail || !assignedSupervisorId) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!supervisorId || !referralData) {
+      return res
+        .status(400)
+        .json({ error: "Missing supervisorId or referralData" });
     }
 
-    // ✅ Fetch supervisor from Firestore
-    const supervisorDoc = await db.collection("users").doc(assignedSupervisorId).get();
+    // ✅ Fetch supervisor’s email from Firestore
+    const supervisorDoc = await db.collection("users").doc(supervisorId).get();
+
     if (!supervisorDoc.exists) {
-      return res.status(404).json({ error: "Assigned supervisor not found" });
+      return res.status(404).json({ error: "Supervisor not found" });
     }
 
-    const supervisor = supervisorDoc.data();
-    const supervisorEmail = supervisor.email;
+    const supervisorEmail = supervisorDoc.data().email;
 
     if (!supervisorEmail) {
-      return res.status(400).json({ error: "Supervisor has no email" });
+      return res.status(400).json({ error: "Supervisor email not found" });
     }
 
-    // Setup Nodemailer
+    console.log("Supervisor email found:", supervisorEmail);
+
+    // ✅ Setup Nodemailer
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -49,26 +54,42 @@ export default async function handler(req, res) {
       },
     });
 
-    // Send email ONLY to supervisor
+    // ✅ Send email
     await transporter.sendMail({
       from: `"GBV Referral System" <${process.env.GMAIL_USER}>`,
       to: supervisorEmail,
-      subject: `New Case Assigned: ${caseCode}`,
-      text: `Dear ${supervisor.name},
+      subject: `Assigned Case: ${referralData.caseCode}`,
+      text: `You have been assigned to a new case.
 
-You have been assigned a new case.
+Case Code: ${referralData.caseCode}
+Color Code: ${referralData.clientColorCode}
+Client Info: ${referralData.clientContactInfo}
+Notes: ${referralData.notes}
+Consent Form: ${referralData.consentFormUrl}
+Assigned By: ${referralData.assignedBy} (${referralData.assignedByOrg})`,
 
-Case Code: ${caseCode}
-Status: ${updatedStatus}
-Note: ${note}
-Assigned By: ${updatedBy} (${updatedByEmail})
+      html: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <h2 style="color: #004085;">You’ve been assigned a new case</h2>
+  
+  <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+    <tr><td><b>Case Code:</b></td><td>${referralData.caseCode}</td></tr>
+    <tr><td><b>Color Code:</b></td><td>${referralData.clientColorCode}</td></tr>
+    <tr><td><b>Client Info:</b></td><td>${referralData.clientContactInfo}</td></tr>
+    <tr><td><b>Notes:</b></td><td>${referralData.notes}</td></tr>
+    <tr><td><b>Consent Form:</b></td><td><a href="${referralData.consentFormUrl}" target="_blank">${referralData.consentFormUrl}</a></td></tr>
+    <tr><td><b>Assigned By:</b></td><td>${referralData.assignedBy} (${referralData.assignedByOrg})</td></tr>
+  </table>
 
-Please log in to the system to review and take action.
-      `,
+  <p style="margin-top: 20px; color: #555;">Please review this case and take necessary actions.</p>
+</div>
+`,
     });
 
     console.log("Email sent to supervisor:", supervisorEmail);
-    return res.status(200).json({ success: true, message: "Email sent to assigned supervisor" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Email sent to supervisor" });
   } catch (err) {
     console.error("Supervisor Email API error:", err);
     return res.status(500).json({ error: err.message });

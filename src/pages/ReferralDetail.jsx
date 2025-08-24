@@ -244,7 +244,28 @@ const ReferralDetail = () => {
                 assignedByOrg: assignerOrg,
             });
 
+
+
+            // ✅ Send supervisor email
+            await fetch("/api/sendSupervisorEmail", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    supervisorId: selectedSupervisorId,
+                    referralData: {
+                        caseCode: referral.caseCode,
+                        clientColorCode: referral.clientColorCode,
+                        clientContactInfo: referral.clientContactInfo,
+                        notes: referral.notes,
+                        consentFormUrl: referral.consentFormUrl,
+                        assignedBy: assignerName,
+                        assignedByOrg: assignerOrg,
+                    },
+                }),
+            });
+
             Swal.fire("Assigned!", "Supervisor has been assigned.", "success");
+
 
             setReferral((prev) => ({
                 ...prev,
