@@ -240,7 +240,6 @@ const ReferralDetail = () => {
                     caseCode: referral.caseCode,
                     updatedStatus: "Assigned",
                     note: assignNotes,
-                    updatedBy: approverName,
                     updatedByEmail: user.email,
                     assignedSupervisorId: selectedSupervisorId, // 👈 important
                 }),
