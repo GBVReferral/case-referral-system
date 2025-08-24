@@ -247,7 +247,7 @@ const ReferralDetail = () => {
 
 
             // ✅ Send supervisor email
-            await fetch("/api/sendSupervisorEmail", {
+            await fetch("/api/sendSupervisorAssignEmail", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
